@@ -21,7 +21,7 @@ public class InvestigationController {
         return repo.findAll();
     }
 
-    @PostMapping
+    @PostMapping("/add")
     public Investigation add(@Valid @RequestBody Investigation x) {
         x.id = null;
         return repo.save(x);

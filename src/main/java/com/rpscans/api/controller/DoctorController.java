@@ -26,7 +26,7 @@ public class DoctorController {
         return repo.findById(id).orElseThrow();
     }
 
-    @GetMapping("/code/{code}")
+    @GetMapping("/get/{code}")
     public Doctor getByCode(@PathVariable String code) {
         return repo.findByCode(code)
                 .orElseThrow(() -> new RuntimeException("Doctor not found"));

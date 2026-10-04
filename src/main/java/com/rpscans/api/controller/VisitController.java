@@ -1,6 +1,7 @@
 package com.rpscans.api.controller;
 
 import com.rpscans.api.dto.CreateVisitRequest;
+import com.rpscans.api.dto.UpdateVisitRequest;
 import com.rpscans.api.entity.Visit;
 import com.rpscans.api.repository.VisitRepository;
 import com.rpscans.api.service.VisitService;
@@ -32,5 +33,9 @@ public class VisitController {
     @PostMapping
     public Visit create(@RequestBody CreateVisitRequest r) {
         return service.create(r);
+    }
+    @PutMapping("/{id}")
+    public Visit update(@PathVariable Long id, @RequestBody UpdateVisitRequest r) {
+        return service.update(id, r);
     }
 }

@@ -27,7 +27,7 @@ public class PatientController {
         return repo.findById(id).orElseThrow();
     }
 
-    @PostMapping
+    @PostMapping("/add")
     public Patient add(@Valid @RequestBody Patient x) {
         x.id = null;
         Patient p = repo.save(x);
