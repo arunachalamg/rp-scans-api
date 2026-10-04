@@ -40,7 +40,23 @@ public class PatientController {
 
     @PutMapping("/{id}")
     public Patient update(@PathVariable Long id, @Valid @RequestBody Patient x) {
-        x.id = id;
-        return repo.save(x);
+        Patient existing = repo.findById(id).orElseThrow();
+
+        // Preserve the permanent RP patient code during edit.
+        // Saving the incoming detached object directly was clearing patientCode
+        // because the edit payload contains only editable patient fields.
+        existing.name = x.name;
+        existing.fatherHusbandName = x.fatherHusbandName;
+        existing.age = x.age;
+        existing.gender = x.gender;
+        existing.phone = x.phone;
+        existing.email = x.email;
+        existing.address = x.address;
+
+        // Also repairs patients whose code was cleared by the old update logic.
+        if (existing.patientCode == null || existing.patientCode.isBlank()) {
+            existing.patientCode = "RP" + String.format("%06d", existing.id);
+        }
+        return repo.save(existing);
     }
 }

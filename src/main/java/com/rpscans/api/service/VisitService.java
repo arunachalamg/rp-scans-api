@@ -50,7 +50,14 @@ public class VisitService {
     public Visit update(Long visitId, UpdateVisitRequest r) {
         Visit v=visits.findById(visitId).orElseThrow();
         if(r.visitDate()!=null) v.visitDate=r.visitDate();
-        v.referralParty=r.referralPartyId()==null ? null : refs.findById(r.referralPartyId()).orElseThrow();
+
+        // Do not accidentally clear referral during an edit.
+        // Referral is cleared only when the UI explicitly marks the visit as Self.
+        if (Boolean.TRUE.equals(r.self())) {
+            v.referralParty = null;
+        } else if (r.referralPartyId() != null) {
+            v.referralParty = refs.findById(r.referralPartyId()).orElseThrow();
+        }
         v.remarks=r.remarks();
 
         Set<Long> keptItems=new HashSet<>();
