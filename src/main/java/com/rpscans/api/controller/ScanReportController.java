@@ -7,6 +7,7 @@ import com.rpscans.api.entity.Visit;
 import com.rpscans.api.repository.PaymentRepository;
 import com.rpscans.api.repository.VisitInvestigationRepository;
 import com.rpscans.api.repository.VisitRepository;
+import com.rpscans.api.repository.ScanReportFastRepository;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -18,14 +19,17 @@ import java.util.Objects;
 @RequestMapping("/api/reports/scans")
 public class ScanReportController {
     private final VisitRepository visits;
+    private final ScanReportFastRepository fastReports;
     private final VisitInvestigationRepository investigations;
     private final PaymentRepository payments;
 
     public ScanReportController(
             VisitRepository visits,
+            ScanReportFastRepository fastReports,
             VisitInvestigationRepository investigations,
             PaymentRepository payments) {
         this.visits = visits;
+        this.fastReports = fastReports;
         this.investigations = investigations;
         this.payments = payments;
     }
@@ -34,9 +38,7 @@ public class ScanReportController {
     public List<ScanReportResponse> report(
             @RequestParam LocalDate from,
             @RequestParam LocalDate to) {
-        return visits.findReportVisits(from, to).stream()
-                .map(this::toResponse)
-                .toList();
+        return fastReports.find(from, to);
     }
 
     @GetMapping("/patients/{patientCode}")
