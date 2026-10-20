@@ -8,7 +8,7 @@ public record PatientDetailedReportResponse(
         Long visitId, LocalDate date,
         Long patientDbId, String patientId, String patientName, String fatherName,
         Integer age, String gender, String phone, String email, String address,
-        Long referralPartyId, boolean self, String referredBy, String hospitalName, String referralCode,
+        Long referralPartyId, Long doctorId, boolean self, String referredBy, String hospitalName, String referralCode,
         String remarks, BigDecimal amount, BigDecimal discountAmount, BigDecimal finalAmount,
         List<InvestigationInfo> investigations, List<PaymentInfo> payments
 ) {

@@ -28,11 +28,11 @@ public class PatientReportQueryRepository {
             'patientName', p.name, 'fatherName', p.father_husband_name,
             'age', p.age, 'gender', p.gender, 'phone', p.phone,
             'email', p.email, 'address', p.address,
-            'referralPartyId', rp.id,
-            'self', (rp.id IS NULL),
-            'referredBy', COALESCE(rp.name, ''),
-            'hospitalName', COALESCE(rp.hospital, ''),
-            'referralCode', COALESCE(rp.code, ''),
+            'referralPartyId', rp.id, 'doctorId', d.id,
+            'self', v.self,
+            'referredBy', COALESCE(d.name, rp.name, ''),
+            'hospitalName', COALESCE(d.hospital, rp.hospital, ''),
+            'referralCode', COALESCE(d.code, rp.code, ''),
             'remarks', v.remarks,
             'amount', COALESCE(v.gross_amount, 0),
             'discountAmount', COALESCE(v.discount_amount, 0),
@@ -43,6 +43,7 @@ public class PatientReportQueryRepository {
         FROM visits v
         JOIN patients p ON p.id = v.patient_id
         LEFT JOIN referral_parties rp ON rp.id = v.referral_party_id
+        LEFT JOIN doctors d ON d.id = v.doctor_id
         LEFT JOIN LATERAL (
           SELECT COALESCE(jsonb_agg(jsonb_build_object(
             'id', vi.id, 'investigationId', i.id,

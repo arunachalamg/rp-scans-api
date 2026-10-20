@@ -8,6 +8,7 @@ import com.rpscans.api.repository.PaymentRepository;
 import com.rpscans.api.repository.VisitInvestigationRepository;
 import com.rpscans.api.repository.VisitRepository;
 import com.rpscans.api.repository.ScanReportFastRepository;
+import com.rpscans.api.repository.PatientReportQueryRepository;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -20,16 +21,19 @@ import java.util.Objects;
 public class ScanReportController {
     private final VisitRepository visits;
     private final ScanReportFastRepository fastReports;
+    private final PatientReportQueryRepository patientReportQueries;
     private final VisitInvestigationRepository investigations;
     private final PaymentRepository payments;
 
     public ScanReportController(
             VisitRepository visits,
             ScanReportFastRepository fastReports,
+            PatientReportQueryRepository patientReportQueries,
             VisitInvestigationRepository investigations,
             PaymentRepository payments) {
         this.visits = visits;
         this.fastReports = fastReports;
+        this.patientReportQueries = patientReportQueries;
         this.investigations = investigations;
         this.payments = payments;
     }
@@ -43,9 +47,7 @@ public class ScanReportController {
 
     @GetMapping("/patients/{patientCode}")
     public List<PatientDetailedReportResponse> patientReport(@PathVariable String patientCode) {
-        return visits.findReportVisitsByPatientCode(patientCode).stream()
-                .map(this::toDetailedResponse)
-                .toList();
+        return patientReportQueries.findByPatientCode(patientCode);
     }
 
     private PatientDetailedReportResponse toDetailedResponse(Visit visit) {
@@ -67,9 +69,9 @@ public class ScanReportController {
         return new PatientDetailedReportResponse(
                 visit.id, visit.visitDate, patient.id, patientCode, patient.name, patient.fatherHusbandName,
                 patient.age, patient.gender, patient.phone, patient.email, patient.address,
-                referral == null ? null : referral.id, referral == null,
-                referral == null ? "" : referral.name, referral == null || referral.hospital == null ? "" : referral.hospital,
-                referral == null ? "" : referral.code, visit.remarks, gross, discount, net, itemList, paymentList);
+                referral == null ? null : referral.id, visit.doctor == null ? null : visit.doctor.id, visit.self,
+                visit.doctor != null ? visit.doctor.name : (referral == null ? "" : referral.name), visit.doctor != null ? visit.doctor.hospital : (referral == null || referral.hospital == null ? "" : referral.hospital),
+                visit.doctor != null ? visit.doctor.code : (referral == null ? "" : referral.code), visit.remarks, gross, discount, net, itemList, paymentList);
     }
 
     private ScanReportResponse toResponse(Visit visit) {
@@ -112,7 +114,7 @@ public class ScanReportController {
                 patient.name,
                 patient.fatherHusbandName,
                 patient.phone,
-                referral == null,
+                visit.self,
                 investigationNames,
                 referral == null ? "" : referral.name,
                 referral == null || referral.hospital == null ? "" : referral.hospital,

@@ -5,7 +5,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 public record UpdateVisitRequest(
-        LocalDate visitDate, Boolean self, Long referralPartyId, String remarks,
+        LocalDate visitDate, Boolean self, Long referralPartyId, Long doctorId, String remarks,
         List<Item> investigations, List<Pay> payments
 ) {
     public record Item(

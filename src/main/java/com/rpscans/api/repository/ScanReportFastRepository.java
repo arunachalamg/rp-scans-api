@@ -22,10 +22,10 @@ public class ScanReportFastRepository {
     }
 
     private static final String SQL = """
-        SELECT v.id, v.visit_date, p.id AS patient_db_id, p.patient_code,
+        SELECT v.id, v.visit_date, v.self, p.id AS patient_db_id, p.patient_code,
                p.name AS patient_name, p.father_husband_name, p.phone,
-               rp.id AS referral_id, rp.name AS referral_name,
-               rp.hospital AS hospital_name, rp.code AS referral_code,
+               COALESCE(d.id, rp.id) AS referral_id, COALESCE(d.name, rp.name) AS referral_name,
+               COALESCE(d.hospital, rp.hospital) AS hospital_name, COALESCE(d.code, rp.code) AS referral_code,
                COALESCE(v.gross_amount, 0) AS gross_amount,
                COALESCE(v.discount_amount, 0) AS discount_amount,
                COALESCE(v.final_amount, COALESCE(v.gross_amount,0)-COALESCE(v.discount_amount,0)) AS final_amount,
@@ -36,6 +36,7 @@ public class ScanReportFastRepository {
         FROM visits v
         JOIN patients p ON p.id = v.patient_id
         LEFT JOIN referral_parties rp ON rp.id = v.referral_party_id
+        LEFT JOIN doctors d ON d.id = v.doctor_id
         LEFT JOIN LATERAL (
             SELECT string_agg(DISTINCT i.name, ', ' ORDER BY i.name) AS investigation_names,
                    bool_or(vi.concession) AS has_concession,
@@ -71,7 +72,7 @@ public class ScanReportFastRepository {
             return new ScanReportResponse(
                     rs.getLong("id"), rs.getObject("visit_date", LocalDate.class),
                     patientCode, rs.getString("patient_name"), rs.getString("father_husband_name"),
-                    rs.getString("phone"), rs.getObject("referral_id") == null,
+                    rs.getString("phone"), rs.getBoolean("self"),
                     rs.getString("investigation_names"), rs.getString("referral_name") == null ? "" : rs.getString("referral_name"),
                     rs.getString("hospital_name") == null ? "" : rs.getString("hospital_name"),
                     rs.getString("referral_code") == null ? "" : rs.getString("referral_code"),
