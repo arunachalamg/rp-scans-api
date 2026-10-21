@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS staff_credentials (
+ staff_id BIGINT PRIMARY KEY REFERENCES staff(id) ON DELETE CASCADE,
+ password_hash VARCHAR(512) NOT NULL
+);
