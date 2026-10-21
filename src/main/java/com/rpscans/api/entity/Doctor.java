@@ -15,6 +15,8 @@ public class Doctor {
  @NotBlank
  @Column(nullable = false)
  public String name;
+ @Column(name = "person_type", nullable = false, length = 10)
+ public String personType = "DOCTOR";
  public String hospital;
  public String address;
  public String phone;
