@@ -13,6 +13,7 @@ public record ScanReportResponse(
         String phone,
         boolean self,
         String investigation,
+        List<InvestigationInfo> investigations,
         String referredBy,
         String hospitalName,
         String referralCode,
@@ -23,5 +24,6 @@ public record ScanReportResponse(
         BigDecimal finalAmount,
         List<PaymentInfo> payments
 ) {
+    public record InvestigationInfo(String name, String referralCode, boolean cancelled, String cancellationReason) {}
     public record PaymentInfo(String mode, BigDecimal amount) {}
 }

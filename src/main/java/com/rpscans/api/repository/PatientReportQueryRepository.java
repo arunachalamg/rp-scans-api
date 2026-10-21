@@ -51,7 +51,10 @@ public class PatientReportQueryRepository {
             'amount', vi.amount, 'concession', vi.concession,
             'discountAmount', vi.discount_amount,
             'discountReason', vi.discount_reason,
-            'referralAmount', vi.referral_amount
+            'referralAmount', vi.referral_amount,
+            'referralCode', COALESCE(vi.referral_code, ''),
+            'cancelled', vi.cancelled, 'cancellationReason', vi.cancellation_reason, 'cancelledAt', vi.cancelled_at,
+            'statusHistory', (SELECT COALESCE(jsonb_agg(jsonb_build_object('action', a.action, 'reason', a.reason, 'changedAt', a.changed_at) ORDER BY a.changed_at, a.id), '[]'::jsonb) FROM investigation_status_audit a WHERE a.visit_investigation_id = vi.id)
           ) ORDER BY vi.id), '[]'::jsonb) AS items
           FROM visit_investigations vi
           JOIN investigations i ON i.id = vi.investigation_id

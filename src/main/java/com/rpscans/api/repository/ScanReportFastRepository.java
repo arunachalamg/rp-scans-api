@@ -30,6 +30,7 @@ public class ScanReportFastRepository {
                COALESCE(v.discount_amount, 0) AS discount_amount,
                COALESCE(v.final_amount, COALESCE(v.gross_amount,0)-COALESCE(v.discount_amount,0)) AS final_amount,
                COALESCE(inv.investigation_names, '') AS investigation_names,
+               COALESCE(inv.investigation_json, '[]'::jsonb)::text AS investigation_json,
                COALESCE(inv.has_concession, false) AS has_concession,
                COALESCE(inv.discount_reasons, '') AS discount_reasons,
                COALESCE(pay.payment_json, '[]'::jsonb)::text AS payment_json
@@ -38,9 +39,15 @@ public class ScanReportFastRepository {
         LEFT JOIN referral_parties rp ON rp.id = v.referral_party_id
         LEFT JOIN doctors d ON d.id = v.doctor_id
         LEFT JOIN LATERAL (
-            SELECT string_agg(DISTINCT i.name, ', ' ORDER BY i.name) AS investigation_names,
-                   bool_or(vi.concession) AS has_concession,
-                   string_agg(DISTINCT NULLIF(btrim(vi.discount_reason), ''), ', ') AS discount_reasons
+            SELECT string_agg(DISTINCT i.name, ', ' ORDER BY i.name) FILTER (WHERE vi.cancelled = false) AS investigation_names,
+                   jsonb_agg(jsonb_build_object(
+                     'name', i.name,
+                     'referralCode', COALESCE(vi.referral_code, ''),
+                     'cancelled', vi.cancelled,
+                     'cancellationReason', vi.cancellation_reason
+                   ) ORDER BY vi.id) AS investigation_json,
+                   bool_or(vi.concession) FILTER (WHERE vi.cancelled = false) AS has_concession,
+                   string_agg(DISTINCT NULLIF(btrim(vi.discount_reason), ''), ', ') FILTER (WHERE vi.cancelled = false) AS discount_reasons
             FROM visit_investigations vi
             JOIN investigations i ON i.id = vi.investigation_id
             WHERE vi.visit_id = v.id
@@ -65,6 +72,13 @@ public class ScanReportFastRepository {
             } catch (Exception e) {
                 throw new IllegalStateException("Unable to parse payments for visit " + rs.getLong("id"), e);
             }
+            List<ScanReportResponse.InvestigationInfo> investigationInfo;
+            try {
+                investigationInfo = json.readValue(rs.getString("investigation_json"),
+                        new TypeReference<List<ScanReportResponse.InvestigationInfo>>() {});
+            } catch (Exception e) {
+                throw new IllegalStateException("Unable to parse investigations for visit " + rs.getLong("id"), e);
+            }
             String patientCode = rs.getString("patient_code");
             if (patientCode == null || patientCode.isBlank()) {
                 patientCode = "RP" + String.format("%06d", rs.getLong("patient_db_id"));
@@ -73,7 +87,7 @@ public class ScanReportFastRepository {
                     rs.getLong("id"), rs.getObject("visit_date", LocalDate.class),
                     patientCode, rs.getString("patient_name"), rs.getString("father_husband_name"),
                     rs.getString("phone"), rs.getBoolean("self"),
-                    rs.getString("investigation_names"), rs.getString("referral_name") == null ? "" : rs.getString("referral_name"),
+                    rs.getString("investigation_names"), investigationInfo, rs.getString("referral_name") == null ? "" : rs.getString("referral_name"),
                     rs.getString("hospital_name") == null ? "" : rs.getString("hospital_name"),
                     rs.getString("referral_code") == null ? "" : rs.getString("referral_code"),
                     rs.getBoolean("has_concession"), rs.getString("discount_reasons"),

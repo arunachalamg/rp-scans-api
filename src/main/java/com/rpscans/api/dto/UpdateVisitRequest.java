@@ -10,7 +10,8 @@ public record UpdateVisitRequest(
 ) {
     public record Item(
             Long id, Long investigationId, BigDecimal amount, boolean concession,
-            BigDecimal discountAmount, String discountReason, BigDecimal referralAmount
+            BigDecimal discountAmount, String discountReason, BigDecimal referralAmount, String referralCode,
+            Boolean cancelled, String cancellationReason, String reactivationReason
     ) {}
     public record Pay(Long id, String mode, BigDecimal amount, String referenceNo) {}
 }

@@ -57,7 +57,7 @@ public class ScanReportController {
                 new PatientDetailedReportResponse.InvestigationInfo(
                         item.id, item.investigation.id, item.investigation.code, item.investigation.name,
                         item.investigation.modality, item.amount, item.concession, item.discountAmount,
-                        item.discountReason, item.referralAmount)).toList();
+                        item.discountReason, item.referralAmount, item.referralCode, item.cancelled, item.cancellationReason, item.cancelledAt)).toList();
         var paymentList = payments.findByVisitId(visit.id).stream().map(p ->
                 new PatientDetailedReportResponse.PaymentInfo(p.id, formatMode(p.mode), p.amount, p.referenceNo)).toList();
         BigDecimal gross = visit.grossAmount == null ? BigDecimal.ZERO : visit.grossAmount;
@@ -116,6 +116,14 @@ public class ScanReportController {
                 patient.phone,
                 visit.self,
                 investigationNames,
+                items.stream().map(item ->
+                        new ScanReportResponse.InvestigationInfo(
+                                item.investigation.name,
+                                item.referralCode == null ? "" : item.referralCode,
+                                item.cancelled,
+                                item.cancellationReason
+                        )
+                ).toList(),
                 referral == null ? "" : referral.name,
                 referral == null || referral.hospital == null ? "" : referral.hospital,
                 referral == null ? "" : referral.code,

@@ -19,10 +19,11 @@ public class VisitService {
     private final VisitRepository visits;
     private final VisitInvestigationRepository items;
     private final PaymentRepository payments;
+    private final InvestigationStatusAuditRepository statusAudits;
 
     public VisitService(PatientRepository a, ReferralPartyRepository b, InvestigationRepository c,
-                        VisitRepository d, VisitInvestigationRepository e, PaymentRepository f, DoctorRepository g) {
-        patients=a; refs=b; invs=c; visits=d; items=e; payments=f; doctors=g;
+                        VisitRepository d, VisitInvestigationRepository e, PaymentRepository f, DoctorRepository g, InvestigationStatusAuditRepository statusAudits) {
+        patients=a; refs=b; invs=c; visits=d; items=e; payments=f; doctors=g; this.statusAudits=statusAudits;
     }
 
     @Transactional
@@ -79,16 +80,42 @@ public class VisitService {
                 } else {
                     x = new VisitInvestigation(); x.visit = v;
                 }
-                // A reference avoids SELECTing investigation master for each billing row.
-                x.investigation = invs.getReferenceById(q.investigationId());
-                x.amount = nvl(q.amount()); x.concession = q.concession();
-                x.discountAmount = q.concession() ? nvl(q.discountAmount()) : BigDecimal.ZERO;
-                x.discountReason = q.concession() ? q.discountReason() : null;
-                x.referralAmount = nvl(q.referralAmount());
+                boolean requestedCancelled = Boolean.TRUE.equals(q.cancelled());
+                boolean wasCancelled = x.cancelled;
+                if (wasCancelled && !requestedCancelled) {
+                    String reason = q.reactivationReason() == null ? "" : q.reactivationReason().trim();
+                    if (reason.isBlank()) throw new IllegalArgumentException("Reactivation reason is mandatory");
+                    if (reason.length() > 1000) throw new IllegalArgumentException("Reactivation reason is too long");
+                    x.cancelled = false;
+                    x.cancellationReason = null;
+                    x.cancelledAt = null;
+                    statusAudits.save(new InvestigationStatusAudit(x.id, v.id, "REACTIVATED", reason));
+                } else if (!wasCancelled && requestedCancelled) {
+                    if (q.id() == null) throw new IllegalArgumentException("Cannot create a cancelled investigation");
+                    String reason = q.cancellationReason() == null ? "" : q.cancellationReason().trim();
+                    if (reason.isBlank()) throw new IllegalArgumentException("Cancellation reason is mandatory");
+                    if (reason.length() > 1000) throw new IllegalArgumentException("Cancellation reason is too long");
+                    x.cancelled = true;
+                    x.cancellationReason = reason;
+                    x.cancelledAt = java.time.OffsetDateTime.now();
+                    statusAudits.save(new InvestigationStatusAudit(x.id, v.id, "CANCELLED", reason));
+                }
+                // Preserve original amounts, discount and referral details during reactivation.
+                // Existing cancelled rows cannot be modified while they remain cancelled.
+                if (!wasCancelled && !requestedCancelled) {
+                    x.investigation = invs.getReferenceById(q.investigationId());
+                    x.amount = nvl(q.amount()); x.concession = q.concession();
+                    x.discountAmount = q.concession() ? nvl(q.discountAmount()) : BigDecimal.ZERO;
+                    x.discountReason = q.concession() ? q.discountReason() : null;
+                    x.referralAmount = nvl(q.referralAmount());
+                    x.referralCode = q.referralCode();
+                } else if (q.id() == null) {
+                    throw new IllegalArgumentException("Invalid investigation state");
+                }
                 if (q.id() == null) items.save(x);
-                gross = gross.add(x.amount); discount = discount.add(x.discountAmount);
+                if (!x.cancelled) { gross = gross.add(x.amount); discount = discount.add(x.discountAmount); }
             }
-            for (var old : existingItems.values()) if (!keptItems.contains(old.id)) items.delete(old);
+            for (var old : existingItems.values()) if (!keptItems.contains(old.id)) throw new IllegalArgumentException("Saved investigations cannot be deleted. Cancel with a reason instead.");
             v.grossAmount = gross; v.discountAmount = discount; v.finalAmount = gross.subtract(discount);
         }
 
