@@ -39,7 +39,9 @@ public class VisitService {
             VisitInvestigation x=new VisitInvestigation(); x.visit=v;
             x.investigation=invs.findById(q.investigationId()).orElseThrow(); x.amount=nvl(q.amount());
             x.concession=q.concession(); x.discountAmount=nvl(q.discountAmount()); x.discountReason=q.discountReason();
-            x.referralAmount=nvl(q.referralAmount()); items.save(x);
+            x.referralAmount=nvl(q.referralAmount());
+            x.referralCode = normalizeReferralCode(q.referralCode());
+            items.save(x);
         }
         if(r.payments()!=null) for(var q:r.payments()) {
             Payment p=new Payment(); p.visit=v; p.mode=parseMode(q.mode()); p.amount=nvl(q.amount());
@@ -108,7 +110,7 @@ public class VisitService {
                     x.discountAmount = q.concession() ? nvl(q.discountAmount()) : BigDecimal.ZERO;
                     x.discountReason = q.concession() ? q.discountReason() : null;
                     x.referralAmount = nvl(q.referralAmount());
-                    x.referralCode = q.referralCode();
+                    x.referralCode = normalizeReferralCode(q.referralCode());
                 } else if (q.id() == null) {
                     throw new IllegalArgumentException("Invalid investigation state");
                 }
@@ -143,6 +145,9 @@ public class VisitService {
         BigDecimal gross=BigDecimal.ZERO, disc=BigDecimal.ZERO;
         if(list!=null) for(var q:list) { gross=gross.add(nvl(q.amount())); disc=disc.add(nvl(q.discountAmount())); }
         v.grossAmount=gross; v.discountAmount=disc; v.finalAmount=gross.subtract(disc);
+    }
+    private String normalizeReferralCode(String code) {
+        return code == null || code.isBlank() ? "0" : code.trim();
     }
     private BigDecimal nvl(BigDecimal x){ return x==null?BigDecimal.ZERO:x; }
     private Payment.Mode parseMode(String mode){ return Payment.Mode.valueOf((mode==null?"CASH":mode).toUpperCase()); }

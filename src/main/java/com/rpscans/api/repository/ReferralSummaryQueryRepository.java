@@ -20,7 +20,7 @@ public class ReferralSummaryQueryRepository {
                  CASE WHEN d.id IS NOT NULL THEN
                    CASE WHEN upper(coalesce(d.person_type, 'DOCTOR')) = 'STAFF' THEN 'Staff' ELSE 'Doctor' END
                    ELSE CASE WHEN upper(coalesce(rp.type, 'DOCTOR')) = 'STAFF' THEN 'Staff' ELSE 'Doctor' END END AS party_type,
-                 vi.amount, vi.discount_amount, vi.referral_amount
+                 vi.amount, vi.discount_amount, vi.referral_code
           FROM visits v
           JOIN visit_investigations vi ON vi.visit_id = v.id AND vi.cancelled = false
           LEFT JOIN doctors d ON d.id = v.doctor_id
@@ -31,7 +31,7 @@ public class ReferralSummaryQueryRepository {
         SELECT party_id AS id, party_name AS name, party_type AS type,
                COUNT(DISTINCT patient_id) AS patients,
                COALESCE(SUM(COALESCE(amount,0) - COALESCE(discount_amount,0)),0) AS amount,
-               COALESCE(SUM(COALESCE(referral_amount,0)),0) AS referral
+               COALESCE(SUM(CASE WHEN trim(COALESCE(referral_code,'')) ~ '^[0-9]+$' THEN LEAST(trim(referral_code)::numeric, 1000000) * 100 ELSE 0 END),0) AS referral
         FROM attributed
         GROUP BY party_id, party_name, party_type
         ORDER BY party_name, party_type
@@ -56,7 +56,8 @@ public class ReferralSummaryQueryRepository {
                  COALESCE(d.hospital, rp.hospital, '') AS hospital,
                  i.name AS investigation,
                  vi.amount - COALESCE(vi.discount_amount,0) AS amount,
-                 COALESCE(vi.referral_amount,0) AS referral,
+                 CASE WHEN trim(COALESCE(vi.referral_code,'')) ~ '^[0-9]+$' THEN LEAST(trim(vi.referral_code)::numeric, 1000000) * 100 ELSE 0 END AS referral,
+                 COALESCE(vi.referral_code, '0') AS referral_code,
                  vi.concession AS concession,
                  COALESCE(vi.discount_reason,'') AS remarks
           FROM visits v
@@ -80,6 +81,7 @@ public class ReferralSummaryQueryRepository {
             m.put("age",rs.getObject("age")); m.put("gender",rs.getString("gender"));
             m.put("hospital",rs.getString("hospital")); m.put("investigation",rs.getString("investigation"));
             m.put("amount",rs.getBigDecimal("amount")); m.put("referral",rs.getBigDecimal("referral"));
+            m.put("referralCode",rs.getString("referral_code"));
             m.put("concession",rs.getBoolean("concession")); m.put("remarks",rs.getString("remarks"));
             return m;
         },from,to,partyId,partyType);
