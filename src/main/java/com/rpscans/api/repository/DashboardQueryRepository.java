@@ -28,7 +28,7 @@ public class DashboardQueryRepository {
           COALESCE(SUM(v.discount_amount),0) AS discount
         FROM today_visits v LEFT JOIN today_payments p ON p.visit_id=v.id
       ), new_patients AS (
-        SELECT COUNT(*) AS total FROM patients WHERE created_at::date = :today
+        SELECT COUNT(*) AS total FROM patients WHERE created_at >= :dayStart AND created_at < :dayEnd
       ), daily_investigations AS (
         SELECT COUNT(*) AS total FROM visit_investigations vi JOIN today_visits v ON v.id=vi.visit_id
       ), modality_counts AS (
@@ -43,7 +43,7 @@ public class DashboardQueryRepository {
         GROUP BY 1
       ), payment_modes AS (
         SELECT UPPER(pm.mode) AS mode, SUM(pm.amount) AS amount
-        FROM payments pm WHERE pm.paid_at::date=:today
+        FROM payments pm WHERE pm.paid_at >= :dayStart AND pm.paid_at < :dayEnd
         GROUP BY UPPER(pm.mode)
       ), recent AS (
         SELECT v.id, p.patient_code, p.name, v.visit_date, v.created_at, v.final_amount,
@@ -78,6 +78,8 @@ public class DashboardQueryRepository {
 
     public String summary() {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
-        return jdbc.queryForObject(SQL, new MapSqlParameterSource("today", today), String.class);
+        return jdbc.queryForObject(SQL, new MapSqlParameterSource("today", today)
+            .addValue("dayStart", today.atStartOfDay())
+            .addValue("dayEnd", today.plusDays(1).atStartOfDay()), String.class);
     }
 }
