@@ -31,6 +31,7 @@ public class VisitService {
         Visit v=new Visit();
         v.patient=patients.findById(r.patientId()).orElseThrow();
         v.visitDate=r.visitDate(); v.remarks=r.remarks();
+        v.self = Boolean.TRUE.equals(r.self());
         if(r.referralPartyId()!=null) v.referralParty=refs.findById(r.referralPartyId()).orElseThrow();
         if(r.doctorId()!=null) { v.doctor=doctors.findById(r.doctorId()).orElseThrow(); v.referralParty=null; }
         applyTotals(v, r.investigations());

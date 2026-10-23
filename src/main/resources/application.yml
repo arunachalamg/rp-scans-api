@@ -1,6 +1,6 @@
 spring:
   application:
-    name: rp-scans-api
+    name: rp-scans-svc
   datasource:
     url: ${SUPABASE_DB_URL}
     username: ${SUPABASE_DB_USERNAME}
